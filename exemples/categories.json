@@ -1,0 +1,17 @@
+{
+  "nomina": ["nomina"],
+  "habitatge": ["hipoteca", "comunitat", "lloguer"],
+  "llum": ["electrica"],
+  "gas": ["gas natural"],
+  "aigua": ["aigues"],
+  "telf_internet": ["telefonia", "fibra"],
+  "alimentacio": ["supermercat", "fruiteria", "forn "],
+  "salut": ["farmacia", "dentista"],
+  "cotxe": ["taller", "assegurança cotxe"],
+  "benzina": ["benzinera"],
+  "transport": ["metro", "bus"],
+  "oci": ["restaurant", "cinema"],
+  "compra": ["llibreria", "botiga"],
+  "efectiu": ["cajero", "retirada efectivo"],
+  "estalvi": ["pla d'estalvi"]
+}

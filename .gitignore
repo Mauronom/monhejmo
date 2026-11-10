@@ -1,0 +1,14 @@
+*.pyc
+__pycache__/
+.pytest_cache/
+.DS_Store
+*.swp
+
+# Extractes bancaris i configuració personal
+*.n43
+infra/dades/*
+
+# Gràfiques generades per Bokeh
+*.html
+
+QWEN.md
