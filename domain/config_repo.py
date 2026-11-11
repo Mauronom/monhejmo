@@ -30,6 +30,12 @@ class ConfigPrevisioRepo(ABC):
         """Retorna la ConfigPrevisio."""
 
 
+class ConfigDespesesVariablesRepo(ABC):
+    @abstractmethod
+    def get_criteris(self):
+        """Retorna els CriterisDespesesVariables."""
+
+
 class RepositoriSuposits(ABC):
     """Supòsits de la previsió (Suposit o FixAcabat), en l'ordre en què s'han afegit."""
 

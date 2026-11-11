@@ -10,6 +10,7 @@ from .afegir_categoria import AfegirCategoria
 from .editar_categoria import EditarCategoria
 from .eliminar_categoria import EliminarCategoria
 from .moviments_recurrents import MovimentsRecurrents
+from .despeses_variables import CalcularDespesesVariables
 from .preveure_saldo import PreveureSaldo
 from .suposits import (LlistarSuposits, AfegirSuposit, EliminarSuposit, LlistarFixosAcabats, AcabarFix,
                        EliminarFixAcabat, LlistarPagamentsEfectiu, AfegirPagamentEfectiu,
@@ -31,6 +32,7 @@ class CasosUs:
     eliminar_categoria: EliminarCategoria
     despeses_fixes: MovimentsRecurrents
     ingressos_fixos: MovimentsRecurrents
+    despeses_variables: CalcularDespesesVariables
     preveure_saldo: PreveureSaldo
     llistar_suposits: LlistarSuposits
     afegir_suposit: AfegirSuposit
@@ -45,7 +47,7 @@ class CasosUs:
     @classmethod
     def construir(cls, font, config_ficticis, repositori_categories, sessio,
                   config_despeses_fixes, config_ingressos_fixos, config_previsio, repositori_suposits,
-                  repositori_fixos_acabats, repositori_pagaments_efectiu):
+                  repositori_fixos_acabats, repositori_pagaments_efectiu, config_despeses_variables):
         return cls(
             carregar_moviments=CarregarMoviments(font, config_ficticis, repositori_categories, sessio,
                                                  repositori_pagaments_efectiu),
@@ -60,6 +62,7 @@ class CasosUs:
             eliminar_categoria=EliminarCategoria(repositori_categories),
             despeses_fixes=MovimentsRecurrents(sessio, config_despeses_fixes),
             ingressos_fixos=MovimentsRecurrents(sessio, config_ingressos_fixos, ingressos=True),
+            despeses_variables=CalcularDespesesVariables(sessio, config_despeses_fixes, config_despeses_variables),
             preveure_saldo=PreveureSaldo(sessio, config_despeses_fixes, config_ingressos_fixos, config_previsio,
                                          repositori_suposits, repositori_fixos_acabats),
             llistar_suposits=LlistarSuposits(repositori_suposits),

@@ -1,6 +1,7 @@
 from datetime import date
 import pytest
-from infra.ui_freesimplegui import llegir_data, construir_filtre
+from infra.ui_freesimplegui import (llegir_data, construir_filtre, files_despeses_categoria,
+                                   files_despeses_puntuals, text_resum_despeses_variables)
 
 
 @pytest.mark.parametrize("text, esperat", [
@@ -198,3 +199,30 @@ def test_text_resum_previsio_diu_quines_categories_no_compten_a_la_resta():
 
     assert "Resta de moviments (mediana, sense amortitzacio, obres): -312.50 €/mes\n" in \
         text_resum_previsio(ResultatPrevisio(previsio, {}, base.resum))
+
+
+def _despeses_variables():
+    from decimal import Decimal
+    from domain import DespesaCategoria, DespesesVariables, Moviment
+    sofa = Moviment(date(2025, 2, 3), "BOTIGA DE MOBLES", Decimal("-1500"), 0, "Banc A", "compra")
+    return DespesesVariables(
+        per_categoria=[DespesaCategoria("alimentacio", Decimal(300), Decimal("25.37"), 12),
+                       DespesaCategoria("oci", Decimal(100), Decimal("8.46"), 3)],
+        puntuals=[sofa], total=Decimal(400), mensual=Decimal("33.83"),
+        total_puntuals=Decimal(1500), mesos=Decimal("11.82"))
+
+
+def test_files_despeses_categoria_amb_el_percentatge_del_total():
+    assert files_despeses_categoria(_despeses_variables()) == [
+        ["alimentacio", "300.00", "25.37", 12, "75.0 %"],
+        ["oci", "100.00", "8.46", 3, "25.0 %"]]
+
+
+def test_files_despeses_puntuals():
+    assert files_despeses_puntuals(_despeses_variables()) == [
+        ["2025-02-03", "BOTIGA DE MOBLES", "Banc A", "compra", "1500.00"]]
+
+
+def test_text_resum_despeses_variables():
+    assert text_resum_despeses_variables(_despeses_variables()) == (
+        "Total: 400.00 € en 11.82 mesos (33.83 €/mes). Puntuals a part: 1500.00 €.")

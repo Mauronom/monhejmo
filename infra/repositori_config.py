@@ -1,8 +1,10 @@
 from typing import List
 import json
 from datetime import datetime
+from decimal import Decimal
 from domain import (ConfigMovimentsFicticisRepo, ReglaMovimentFictici, ConfigRecurrentsRepo,
-                    CriterisRecurrents, ConfigPrevisioRepo, ConfigPrevisio)
+                    CriterisRecurrents, ConfigPrevisioRepo, ConfigPrevisio,
+                    ConfigDespesesVariablesRepo, CriterisDespesesVariables)
 
 
 class JsonConfigMovimentsFicticisRepo(ConfigMovimentsFicticisRepo):
@@ -113,6 +115,35 @@ class JsonConfigPrevisioRepo(ConfigPrevisioRepo):
             bancs_exclosos=tuple(seccio.get("bancs_exclosos", defecte.bancs_exclosos)),
             categories_excloses=tuple(seccio.get("categories_excloses", defecte.categories_excloses)),
         )
+
+
+class JsonConfigDespesesVariablesRepo(ConfigDespesesVariablesRepo):
+    """Criteris de les despeses variables, a la secció "despeses_variables" de config.json.
+    Sense la secció, els valors per defecte."""
+
+    def __init__(self, config_path):
+        self.config_path = config_path
+
+    def get_criteris(self):
+        try:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
+                seccio = json.load(f).get("despeses_variables", {})
+        except FileNotFoundError:
+            seccio = {}
+        defecte = CriterisDespesesVariables()
+        llindar = seccio.get("llindar_puntual")
+        return CriterisDespesesVariables(
+            llindar_puntual=defecte.llindar_puntual if llindar is None else Decimal(str(llindar)),
+            categories_excloses=tuple(seccio.get("categories_excloses", defecte.categories_excloses)),
+        )
+
+
+class MemoryConfigDespesesVariablesRepo(ConfigDespesesVariablesRepo):
+    def __init__(self, criteris=None):
+        self._criteris = criteris or CriterisDespesesVariables()
+
+    def get_criteris(self):
+        return self._criteris
 
 
 class MemoryConfigPrevisioRepo(ConfigPrevisioRepo):

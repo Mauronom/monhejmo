@@ -14,14 +14,14 @@ Abans, `python3 scripts/comprovar_dades.py` ha de dir OK.
 - [ ] El desplegable de categoria filtra; "Totes" mostra tot.
 
 ## Gràfiques
-- [ ] "Mostrar gràfica per balanç" obre la gràfica amb una línia per banc i el Total.
-- [ ] "Mostrar gràfica per imports" obre la gràfica d'imports acumulats.
-- [ ] "Mostrar gràfica per categories" obre la gràfica de despeses per categoria.
+- [ ] Gràfiques › "Balanç" obre la gràfica amb una línia per banc i el Total.
+- [ ] Gràfiques › "Imports" obre la gràfica d'imports acumulats.
+- [ ] Gràfiques › "Categories" obre la gràfica de despeses per categoria.
 - [ ] Amb un filtre actiu, les gràfiques només mostren els moviments filtrats.
 - [ ] Les gràfiques de balanç, d'imports i de previsió tenen una línia vertical el dia 1 de cada mes.
 
 ## Categories
-- [ ] "Gestionar Categories" obre la finestra amb la taula.
+- [ ] "Gestionar categories" obre la finestra amb la taula.
 - [ ] Afegir una categoria: apareix a la taula i al desplegable del filtre.
 - [ ] Seleccionar una fila i Editar: no torna a preguntar quina, i proposa les paraules actuals.
 - [ ] Seleccionar una fila i Eliminar: demana confirmació i desapareix de la taula i del desplegable.
@@ -36,6 +36,13 @@ Abans, `python3 scripts/comprovar_dades.py` ha de dir OK.
 - [ ] "Ingressos fixos" obre la mateixa finestra amb els ingressos (nòmines, etc.) i l'ingrés mensual.
 - [ ] Amb un filtre actiu (p. ex. una categoria o una data fi), només hi surten les d'aquells moviments.
 - [ ] "Tancar" i la creu tanquen la finestra i es torna a la principal.
+
+## Despeses variables
+- [ ] Els botons estan en tres files (Gràfiques, Anàlisi, Configuració) i es veuen tots amb la mida inicial de la finestra.
+- [ ] "Despeses variables" obre la taula per categories (de més a menys), amb €/mes i % del total; no hi surten "traspas", "estalvi" ni "amortitzacio".
+- [ ] El resum diu el total, els mesos del període, els €/mes i el total de les puntuals.
+- [ ] A sota, les despeses de més de 1.000 € (sense les amortitzacions), de la més grossa a la més petita.
+- [ ] Canviant les dates del filtre canvien els mesos i la mitjana; filtrant un sol mes, la mútua i els altres fixos continuen fora.
 
 ## Previsió
 - [ ] El "Saldo actual" del resum inclou el SIALP (coincideix amb la columna "Balanç total" del darrer moviment), i la línia de la resta diu "sense amortitzacio, obres".

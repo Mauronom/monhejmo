@@ -35,6 +35,24 @@ def files_recurrents(despeses):
              "actiu" if d.activa else "acabat"] for d in despeses]
 
 
+def files_despeses_categoria(despeses):
+    """Files de la taula de despeses variables per categoria, amb el percentatge sobre el total."""
+    def percentatge(c):
+        return f"{c.total * 100 / despeses.total:.1f} %" if despeses.total else ""
+    return [[c.categoria, f"{c.total:.2f}", f"{c.mensual:.2f}", c.moviments, percentatge(c)]
+            for c in despeses.per_categoria]
+
+
+def files_despeses_puntuals(despeses):
+    """Files de la taula de despeses puntuals grosses (l'import en positiu)."""
+    return [[str(m.data), m.concepte, m.banc, m.categoria, f"{-m.import_:.2f}"] for m in despeses.puntuals]
+
+
+def text_resum_despeses_variables(despeses):
+    return (f"Total: {despeses.total:.2f} € en {despeses.mesos:.2f} mesos ({despeses.mensual:.2f} €/mes). "
+            f"Puntuals a part: {despeses.total_puntuals:.2f} €.")
+
+
 def text_resum_previsio(resultat):
     """Text del resum de la previsió: d'on es parteix i el saldo previst."""
     previsio = resultat.previsio
@@ -133,13 +151,18 @@ class UIFreeSimpleGUI:
              sg.Text("Data fi:"),
              sg.Input(key="-DATA_FI-", size=(12, 1), enable_events=True),
              sg.CalendarButton("📅", target="-DATA_FI-", format="%Y-%m-%d", font=('Arial', 20))],
-            [sg.Button("Mostrar gràfica per balanç", key="-BTN_BALANCE-"),
-             sg.Button("Mostrar gràfica per imports", key="-BTN_IMPORTS-"),
-             sg.Button("Mostrar gràfica per categories", key="-BTN_CATEGORIES-"),
-             sg.Button("Gestionar Categories", key="-BTN_GESTIONAR_CATEGORIES-"),
+            # Botons agrupats per files perquè hi càpiguen tots encara que la finestra sigui estreta
+            [sg.Text("Gràfiques:", size=(13, 1)),
+             sg.Button("Balanç", key="-BTN_BALANCE-"),
+             sg.Button("Imports", key="-BTN_IMPORTS-"),
+             sg.Button("Categories", key="-BTN_CATEGORIES-")],
+            [sg.Text("Anàlisi:", size=(13, 1)),
              sg.Button("Despeses fixes", key="-BTN_DESPESES_FIXES-"),
              sg.Button("Ingressos fixos", key="-BTN_INGRESSOS_FIXOS-"),
-             sg.Button("Previsió", key="-BTN_PREVISIO-"),
+             sg.Button("Despeses variables", key="-BTN_DESPESES_VARIABLES-"),
+             sg.Button("Previsió", key="-BTN_PREVISIO-")],
+            [sg.Text("Configuració:", size=(13, 1)),
+             sg.Button("Gestionar categories", key="-BTN_GESTIONAR_CATEGORIES-"),
              sg.Button("Pagaments en efectiu", key="-BTN_PAGAMENTS_EFECTIU-")],
             [sg.Table(values=[],
                       headings=["Data", "Concepte", "Import (€)", "Balanç del banc", "Balanç total", "Banc", 'Categoria'],
@@ -426,6 +449,50 @@ class UIFreeSimpleGUI:
             "Ingressos que es repeteixen amb un import semblant", "Ingrés mensual dels actius:",
             "ingressos_fixos")
 
+    # --- Despeses variables ------------------------------------------------------
+
+    def _obrir_finestra_despeses_variables(self):
+        """Mostra la despesa del dia a dia dels moviments del filtre actual, per categories."""
+        import FreeSimpleGUI as sg
+
+        despeses = self._casos.despeses_variables.execute(self._filtre_actual())
+        layout = [
+            [sg.Text("Despesa del dia a dia (dels moviments del filtre actual): sense les despeses fixes, "
+                     "els traspassos ni les categories excloses.")],
+            [sg.Table(
+                values=files_despeses_categoria(despeses),
+                headings=["Categoria", "Total (€)", "€/mes", "Moviments", "% del total"],
+                auto_size_columns=True,
+                justification="left",
+                key="-TAULA_CATEGORIES-",
+                expand_x=True,
+                expand_y=True,
+                num_rows=12,
+            )],
+            [sg.Text(text_resum_despeses_variables(despeses))],
+            [sg.Text("Despeses puntuals grosses (no compten al total de dalt):")],
+            [sg.Table(
+                values=files_despeses_puntuals(despeses),
+                headings=["Data", "Concepte", "Banc", "Categoria", "Import (€)"],
+                auto_size_columns=True,
+                justification="left",
+                key="-TAULA_PUNTUALS-",
+                expand_x=True,
+                expand_y=True,
+                num_rows=6,
+            )],
+            [sg.Text("El llindar de les puntuals i les categories excloses es configuren a la secció "
+                     "\"despeses_variables\" de config.json.", font=("Arial", 14)),
+             sg.Push(), sg.Button("Tancar", key="-BTN_TANCAR-")],
+        ]
+
+        window = sg.Window("Despeses variables", layout, modal=True, finalize=True, resizable=True, size=(1100, 700))
+        while True:
+            event, _ = window.read()
+            if event in (sg.WIN_CLOSED, "-BTN_TANCAR-"):
+                break
+        window.close()
+
     # --- Previsió ----------------------------------------------------------------
 
     def _mostrar_previsio(self):
@@ -667,6 +734,8 @@ class UIFreeSimpleGUI:
                 self._obrir_finestra_despeses_fixes()
             elif event == "-BTN_INGRESSOS_FIXOS-":
                 self._obrir_finestra_ingressos_fixos()
+            elif event == "-BTN_DESPESES_VARIABLES-":
+                self._obrir_finestra_despeses_variables()
             elif event == "-BTN_PREVISIO-":
                 self._mostrar_previsio()
             elif event == "-BTN_PAGAMENTS_EFECTIU-":

@@ -78,7 +78,7 @@ cp exemples/categories.json ~/.comptes2/
 }
 ```
 
-Després les pots gestionar des del botó "Gestionar Categories".
+Després les pots gestionar des del botó "Gestionar categories".
 
 ### Configuració (`config.json`)
 

@@ -14,5 +14,6 @@ from .moviments_recurrents import MovimentsRecurrents, ResultatRecurrents
 from .suposits import (LlistarSuposits, AfegirSuposit, EliminarSuposit, LlistarFixosAcabats, AcabarFix,
                        EliminarFixAcabat, LlistarPagamentsEfectiu, AfegirPagamentEfectiu,
                        EliminarPagamentEfectiu)
+from .despeses_variables import CalcularDespesesVariables
 from .preveure_saldo import PreveureSaldo, ResultatPrevisio, ResumPrevisio
 from .casos_us import CasosUs
