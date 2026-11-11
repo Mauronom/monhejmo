@@ -104,3 +104,21 @@ def test_la_sessio_retorna_copies():
 
     assert all(m.categoria == CATEGORIA_PER_DEFECTE for m in sessio.actuals())
     ORIGINALS[0].categoria = CATEGORIA_PER_DEFECTE
+
+
+def test_afegeix_les_compres_de_targeta_i_la_part_assignada_dels_carrecs():
+    compres = FontFalsa([Moviment(date(2025, 1, 3), "Supermercat del barri", -30, 0, "Banc A_targeta"),
+                         Moviment(date(2025, 1, 3), "Forn", -5, 0, "Banc A_targeta")])
+    categories = dict(CATEGORIES, targeta=["credito tarjeta"])
+    sessio = MovimentsSessio()
+    cas_us = CarregarMoviments(FontFalsa(ORIGINALS), None, MemoryCategoriesRepo(categories), sessio,
+                               font_targetes=compres)
+
+    resultat = cas_us.execute("/dades")
+
+    assert compres.directori_llegit == "/dades"
+    del_dia = [(m.concepte, m.import_, m.categoria) for m in resultat.moviments if m.data == date(2025, 1, 3)]
+    assert sorted(del_dia) == [("CREDITO TARJETA ASSIGNADA", 35, "targeta"), ("Forn", -5, CATEGORIA_PER_DEFECTE),
+                               ("Supermercat del barri", -30, "alimentació")]
+    assert resultat.resum.total == 1860  # les compres i la part assignada s'anul·len
+    assert resultat.saldos_totals[-1] == 4750 + 4950 + 10  # els saldos dels bancs no canvien

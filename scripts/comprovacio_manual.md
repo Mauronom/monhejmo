@@ -37,6 +37,12 @@ Abans, `python3 scripts/comprovar_dades.py` ha de dir OK.
 - [ ] Amb un filtre actiu (p. ex. una categoria o una data fi), només hi surten les d'aquells moviments.
 - [ ] "Tancar" i la creu tanquen la finestra i es torna a la principal.
 
+## Extractes de targeta
+- [ ] Amb un `<banc>_targeta_*.xls` al directori, la taula té moviments del banc `<banc>_targeta` amb el nom del comerç i categoria.
+- [ ] Per cada dia amb compres hi ha un "CREDITO TARJETA ASSIGNADA" positiu, a la categoria dels càrrecs de la targeta.
+- [ ] El saldo total del darrer moviment és el mateix que sense l'extracte.
+- [ ] No hi ha cap "REINTEGRO EN CAJERO" (les retirades ja surten al compte).
+
 ## Despeses variables
 - [ ] Els botons estan en tres files (Gràfiques, Anàlisi, Configuració) i es veuen tots amb la mida inicial de la finestra.
 - [ ] "Despeses variables" obre la taula per categories (de més a menys), amb €/mes i % del total; no hi surten "traspas", "estalvi" ni "amortitzacio".

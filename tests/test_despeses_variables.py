@@ -115,3 +115,16 @@ def test_sense_moviments_tot_es_zero():
     assert resultat.per_categoria == []
     assert resultat.puntuals == []
     assert resultat.total == resultat.mensual == resultat.total_puntuals == Decimal(0)
+
+
+def test_la_part_assignada_dels_carrecs_de_targeta_no_compta():
+    from domain import CONCEPTE_TARGETA_ASSIGNADA
+    # Càrrec setmanal de 100 € al compte; 70 € estan desglossats en compres de la targeta
+    carrec = _mov(date(2025, 1, 6), "OP. CREDITO TARJETA", "-100", "targeta")
+    compra = _mov(date(2025, 1, 3), "SUPERMERCAT", "-70", "alimentacio", banc="banc_targeta")
+    assignada = _mov(date(2025, 1, 3), CONCEPTE_TARGETA_ASSIGNADA, "70", "targeta", banc="banc_targeta")
+
+    resultat = _calcular([carrec, compra, assignada])
+
+    assert [(c.categoria, c.total) for c in resultat.per_categoria] == [
+        ("alimentacio", Decimal(70)), ("targeta", Decimal(30))]

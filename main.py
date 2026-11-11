@@ -1,7 +1,7 @@
 from infra import (RepositoriMovimentsNorma43, RepositoriCategoria, JsonConfigMovimentsFicticisRepo,
                    JsonConfigRecurrentsRepo, JsonConfigPrevisioRepo, JsonRepositoriSuposits,
                    JsonRepositoriFixosAcabats, JsonRepositoriPagamentsEfectiu,
-                   JsonConfigDespesesVariablesRepo,
+                   JsonConfigDespesesVariablesRepo, RepositoriTargetesXls,
                    UIBokeh, UIFreeSimpleGUI, resoldre_directori_dades)
 from app import CasosUs, MovimentsSessio
 
@@ -19,5 +19,6 @@ if __name__ == "__main__":
         repositori_fixos_acabats=JsonRepositoriFixosAcabats(directori_dades / "config.json"),
         repositori_pagaments_efectiu=JsonRepositoriPagamentsEfectiu(directori_dades / "config.json"),
         config_despeses_variables=JsonConfigDespesesVariablesRepo(directori_dades / "config.json"),
+        font_targetes=RepositoriTargetesXls(),
     )
     UIFreeSimpleGUI(casos_us, UIBokeh(), directori_dades).run()

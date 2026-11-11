@@ -6,6 +6,8 @@ __pycache__/
 
 # Extractes bancaris i configuració personal
 *.n43
+*.xls
+*.xlsx
 infra/dades/*
 
 # Gràfiques generades per Bokeh

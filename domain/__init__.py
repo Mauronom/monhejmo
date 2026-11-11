@@ -20,5 +20,6 @@ from .pagaments_efectiu import (PagamentEfectiu, validar_pagament_efectiu, gener
                                 BANC_EFECTIU, CONCEPTE_EFECTIU_ASSIGNAT)
 from .saldo_total import saldos_totals
 from .traspassos import marcar_traspassos, CATEGORIA_TRASPAS
+from .targetes import moviments_assignats_targeta, CONCEPTE_TARGETA_ASSIGNADA
 from .despeses_variables import (CriterisDespesesVariables, DespesaCategoria, DespesesVariables,
                                  calcular_despeses_variables)

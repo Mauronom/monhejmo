@@ -47,10 +47,11 @@ class CasosUs:
     @classmethod
     def construir(cls, font, config_ficticis, repositori_categories, sessio,
                   config_despeses_fixes, config_ingressos_fixos, config_previsio, repositori_suposits,
-                  repositori_fixos_acabats, repositori_pagaments_efectiu, config_despeses_variables):
+                  repositori_fixos_acabats, repositori_pagaments_efectiu, config_despeses_variables,
+                  font_targetes=None):
         return cls(
             carregar_moviments=CarregarMoviments(font, config_ficticis, repositori_categories, sessio,
-                                                 repositori_pagaments_efectiu),
+                                                 repositori_pagaments_efectiu, font_targetes),
             filtrar_moviments=FiltrarMoviments(sessio),
             recategoritzar=Recategoritzar(sessio, repositori_categories),
             grafica_balance=GraficaBalance(sessio),

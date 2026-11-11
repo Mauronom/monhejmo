@@ -1,4 +1,5 @@
 from .repositori_norma43 import RepositoriMovimentsNorma43
+from .repositori_targetes import RepositoriTargetesXls
 from .ui_bokeh import UIBokeh
 from .ui_freesimplegui import UIFreeSimpleGUI
 from .repositori_categories import RepositoriCategoria

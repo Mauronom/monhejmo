@@ -1,6 +1,7 @@
 norma43parser==1.1.2
 FreeSimpleGUI==5.2.0.post1
 bokeh==3.3.0
+xlrd==2.0.2
 
 # Desenvolupament
 pytest==8.0.2

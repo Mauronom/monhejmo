@@ -5,7 +5,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional, Tuple
 from .pagaments_efectiu import CONCEPTE_EFECTIU_ASSIGNAT
 from .recurrents import DIES_PER_MES, CENTIMS
+from .targetes import CONCEPTE_TARGETA_ASSIGNADA
 from .traspassos import CATEGORIA_TRASPAS
+
+
+# Moviments positius que no són ingressos: treuen d'una categoria la part que ja surt desglossada
+CONCEPTES_ASSIGNATS = (CONCEPTE_EFECTIU_ASSIGNAT, CONCEPTE_TARGETA_ASSIGNADA)
 
 
 @dataclass(frozen=True)
@@ -54,9 +59,10 @@ def calcular_despeses_variables(moviments, recurrents, criteris, data_inici: Opt
     """
     Despesa del dia a dia: la dels moviments que no són de cap despesa fixa (`recurrents`), ni
     traspassos entre comptes, ni de les categories excloses. Les de més de llindar_puntual van a
-    part. La part de les retirades d'efectiu assignada a pagaments fixos (CONCEPTE_EFECTIU_ASSIGNAT)
-    es resta de la seva categoria. El període (per a la mitjana mensual) va de la data més antiga
-    (moviment o data_inici) a la més recent (moviment o data_fi).
+    part. La part de les retirades d'efectiu assignada a pagaments fixos i la dels càrrecs de la
+    targeta desglossada en compres (CONCEPTES_ASSIGNATS) es resta de la seva categoria. El període
+    (per a la mitjana mensual) va de la data més antiga (moviment o data_inici) a la més recent
+    (moviment o data_fi).
     """
     moviments = list(moviments)
     mesos = _mesos(moviments, data_inici, data_fi)
@@ -74,7 +80,7 @@ def calcular_despeses_variables(moviments, recurrents, criteris, data_inici: Opt
         elif m.import_ < 0:
             totals[m.categoria] -= m.import_
             nombre[m.categoria] += 1
-        elif m.concepte == CONCEPTE_EFECTIU_ASSIGNAT:
+        elif m.concepte in CONCEPTES_ASSIGNATS:
             totals[m.categoria] -= m.import_
 
     def mensual(total):

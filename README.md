@@ -45,6 +45,22 @@ python3 main.py
 En obrir-se, l'aplicació proposa el directori de dades i, en acceptar, llegeix tots els `.n43` que hi
 ha. El nom de cada fitxer (sense l'extensió) és el nom del banc: `banc_a.n43`, `banc_b.n43`...
 
+### Extractes de targeta
+
+Molts bancs carreguen la targeta de crèdit al compte en un sol import (setmanal o mensual), i la
+despesa del dia a dia queda amagada. Si poses l'extracte de la targeta al directori de dades amb el
+nom `<banc>_targeta_<el que vulguis>.xls` (p. ex. `banc_a_targeta_1.xls`), l'aplicació:
+
+- n'afegeix les compres com a moviments del banc `<banc>_targeta`, amb el comerç com a concepte, i
+  les categoritza com la resta;
+- per cada dia amb compres, afegeix un moviment positiu `CREDITO TARJETA ASSIGNADA` que treu aquesta
+  part de la categoria dels càrrecs de la targeta al compte (cal que una categoria contingui
+  `credito tarjeta`), perquè no es compti dues vegades. Els saldos no canvien;
+- no llegeix les retirades de caixer, que ja surten al compte;
+- si dos extractes del mateix banc es solapen, compta cada compra un sol cop.
+
+De moment llegeix el format `.xls` que descarrega Unicaja ("Movimientos de tarjeta").
+
 ### Directori de dades
 
 Les dades (extractes, categories i configuració) es busquen per aquest ordre:
@@ -57,6 +73,7 @@ Les dades (extractes, categories i configuració) es busquen per aquest ordre:
 ~/.comptes2/
 ├── banc_a.n43
 ├── banc_b.n43
+├── banc_a_targeta_1.xls
 ├── categories.json
 └── config.json
 ```
