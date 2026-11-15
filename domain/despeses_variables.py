@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional, Tuple
 from .pagaments_efectiu import CONCEPTE_EFECTIU_ASSIGNAT
+from .categories import es_dins_algun, categoria_a_nivell
 from .recurrents import DIES_PER_MES, CENTIMS
 from .targetes import CONCEPTE_TARGETA_ASSIGNADA
 from .traspassos import CATEGORIA_TRASPAS
@@ -17,7 +18,8 @@ CONCEPTES_ASSIGNATS = (CONCEPTE_EFECTIU_ASSIGNAT, CONCEPTE_TARGETA_ASSIGNADA)
 class CriterisDespesesVariables:
     """
     - llindar_puntual: les despeses de més d'aquest import van a part, com a puntuals.
-    - categories_excloses: categories que no compten (els traspassos no compten mai).
+    - categories_excloses: categories que no compten, amb les seves subcategories (els traspassos no
+      compten mai).
     """
     llindar_puntual: Decimal = Decimal(1000)
     categories_excloses: Tuple[str, ...] = ()
@@ -55,33 +57,35 @@ def _arrodonir(valor):
 
 
 def calcular_despeses_variables(moviments, recurrents, criteris, data_inici: Optional[date] = None,
-                                data_fi: Optional[date] = None):
+                                data_fi: Optional[date] = None, nivell: Optional[int] = None):
     """
     Despesa del dia a dia: la dels moviments que no són de cap despesa fixa (`recurrents`), ni
     traspassos entre comptes, ni de les categories excloses. Les de més de llindar_puntual van a
     part. La part de les retirades d'efectiu assignada a pagaments fixos i la dels càrrecs de la
     targeta desglossada en compres (CONCEPTES_ASSIGNATS) es resta de la seva categoria. El període
     (per a la mitjana mensual) va de la data més antiga (moviment o data_inici) a la més recent
-    (moviment o data_fi).
+    (moviment o data_fi). Amb `nivell`, les categories s'agrupen a aquest nivell de l'arbre (1 és
+    l'arrel); sense, cada despesa va a la seva categoria més concreta.
     """
     moviments = list(moviments)
     mesos = _mesos(moviments, data_inici, data_fi)
     dels_fixos = {id(m) for r in recurrents for m in r.moviments}
-    excloses = set(criteris.categories_excloses) | {CATEGORIA_TRASPAS}
+    excloses = tuple(criteris.categories_excloses) + (CATEGORIA_TRASPAS,)
 
     totals = defaultdict(lambda: Decimal(0))
     nombre = defaultdict(int)
     puntuals = []
     for m in moviments:
-        if id(m) in dels_fixos or m.categoria in excloses:
+        categoria = categoria_a_nivell(m.categoria, nivell) if nivell else m.categoria
+        if id(m) in dels_fixos or es_dins_algun(m.categoria, excloses):
             continue
         if m.import_ < 0 and -m.import_ > criteris.llindar_puntual:
             puntuals.append(m)
         elif m.import_ < 0:
-            totals[m.categoria] -= m.import_
-            nombre[m.categoria] += 1
+            totals[categoria] -= m.import_
+            nombre[categoria] += 1
         elif m.concepte in CONCEPTES_ASSIGNATS:
-            totals[m.categoria] -= m.import_
+            totals[categoria] -= m.import_
 
     def mensual(total):
         return _arrodonir(total / mesos) if mesos else Decimal(0)

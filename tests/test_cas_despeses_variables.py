@@ -75,3 +75,11 @@ def test_sense_la_seccio_o_el_fitxer_els_criteris_per_defecte(tmp_path):
 
     assert JsonConfigDespesesVariablesRepo(fitxer).get_criteris() == CriterisDespesesVariables()
     assert JsonConfigDespesesVariablesRepo(tmp_path / "no_hi_es.json").get_criteris() == CriterisDespesesVariables()
+
+
+def test_agrupa_a_un_nivell_de_l_arbre_de_categories():
+    moviments = [_mov(date(2025, 3, 1), "LLUM", "-50", "casa/llum"), _mov(date(2025, 3, 2), "AIGUA", "-20", "casa/aigua")]
+
+    resultat = _cas(moviments).execute(FiltreMoviments(), nivell=1)
+
+    assert [(c.categoria, c.total) for c in resultat.per_categoria] == [("casa", Decimal(70))]

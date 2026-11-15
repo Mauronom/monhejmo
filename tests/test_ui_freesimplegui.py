@@ -226,3 +226,24 @@ def test_files_despeses_puntuals():
 def test_text_resum_despeses_variables():
     assert text_resum_despeses_variables(_despeses_variables()) == (
         "Total: 400.00 € en 11.82 mesos (33.83 €/mes). Puntuals a part: 1500.00 €.")
+
+
+def test_valors_combo_categories_inclou_els_nodes_intermedis():
+    from infra.ui_freesimplegui import valors_combo_categories
+    categories = {"oci": ["cinema"], "casa/subministraments/llum": ["energia"]}
+
+    assert valors_combo_categories(categories) == [
+        "oci", "casa", "casa/subministraments", "casa/subministraments/llum", "altres", "Totes"]
+
+
+@pytest.mark.parametrize("profunditat, esperat", [
+    (0, ["Detall"]), (1, ["Detall"]), (3, ["Detall", "Nivell 1", "Nivell 2"])])
+def test_valors_combo_nivells(profunditat, esperat):
+    from infra.ui_freesimplegui import valors_combo_nivells
+    assert valors_combo_nivells(profunditat) == esperat
+
+
+@pytest.mark.parametrize("valor, esperat", [("Detall", None), ("Nivell 1", 1), ("Nivell 2", 2), ("", None)])
+def test_llegir_nivell(valor, esperat):
+    from infra.ui_freesimplegui import llegir_nivell
+    assert llegir_nivell(valor) == esperat

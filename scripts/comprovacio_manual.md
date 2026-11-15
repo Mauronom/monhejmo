@@ -28,6 +28,9 @@ Abans, `python3 scripts/comprovar_dades.py` ha de dir OK.
 - [ ] Editar/Eliminar sense fila seleccionada: pregunta quina categoria.
 - [ ] En tancar, els moviments es recategoritzen i el filtre que hi havia es manté.
 - [ ] Els traspassos entre comptes (una transferència que surt d'un compte i entra a un altre amb el mateix import) surten amb categoria "traspas", també després de gestionar categories.
+- [ ] Afegir una categoria `prova/sub` amb una paraula d'un concepte conegut: al desplegable surten `prova` i `prova/sub`, i filtrant per `prova` surten els seus moviments.
+- [ ] Amb `prova/sub` encara creada, a "Despeses variables" triar "Nivell 1" a "Agrupar per": `prova/sub` surt sumada a `prova` i el total no canvia; tornar a "Detall" la desglossa.
+- [ ] Afegir una categoria amb un nivell buit (`prova/` o `prova//sub`) dona un error.
 - [ ] Deixar les categories com estaven (o restaurar `~/.comptes2/categories.json`).
 
 ## Despeses i ingressos fixos

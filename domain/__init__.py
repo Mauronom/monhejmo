@@ -1,5 +1,6 @@
 from .constants import CATEGORIA_PER_DEFECTE
-from .categories import CategoriaInvalida, validar_nom_categoria, parsejar_paraules_clau
+from .categories import (CategoriaInvalida, validar_nom_categoria, parsejar_paraules_clau, SEPARADOR, es_dins,
+                         es_dins_algun, categoria_a_nivell, nodes_categories, profunditat_maxima)
 from .moviment import Moviment, assignar_categories_a_moviments
 from .font_moviments import FontMoviments
 from .repositori_categories import RepositoriCategories

@@ -97,6 +97,23 @@ cp exemples/categories.json ~/.comptes2/
 
 Després les pots gestionar des del botó "Gestionar categories".
 
+Les categories poden tenir subcategories, separades per `/`:
+
+```json
+{
+  "casa/subministraments/llum": ["energia"],
+  "casa/subministraments/aigua": ["aigues de"],
+  "casa/habitatge": ["hipoteca", "comunitat"]
+}
+```
+
+Cada moviment es classifica al nivell més concret. En filtrar per `casa`, surten també tots els
+moviments de les seves subcategories, i excloure una categoria (a `previsio` o a
+`despeses_variables`) n'exclou també les subcategories. Els nivells intermedis (`casa`,
+`casa/subministraments`) surten al desplegable encara que no tinguin paraules pròpies.
+A la pantalla de despeses variables, "Agrupar per" suma les despeses a un nivell de l'arbre
+(per exemple, "Nivell 1" ho ajunta tot a `casa`).
+
 ### Configuració (`config.json`)
 
 És opcional: totes les seccions tenen valors per defecte. Els supòsits, els fixos que s'acaben i els

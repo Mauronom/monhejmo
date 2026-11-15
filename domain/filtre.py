@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from datetime import date
 from typing import Optional
+from .categories import es_dins
 
 
 @dataclass(frozen=True)
 class FiltreMoviments:
-    """Criteris de filtre. Els camps buits (None o "") no filtren."""
+    """Criteris de filtre. Els camps buits (None o "") no filtren. La categoria inclou les seves subcategories."""
     text: str = ""
     data_inici: Optional[date] = None
     data_fi: Optional[date] = None
@@ -24,7 +25,7 @@ def filtrar_moviments(moviments, filtre):
 
     def compleix(m):
         return ((not text or text in m.concepte.lower())
-                and (not filtre.categoria or m.categoria == filtre.categoria)
+                and (not filtre.categoria or es_dins(m.categoria, filtre.categoria))
                 and (not filtre.data_inici or m.data >= filtre.data_inici)
                 and (not filtre.data_fi or m.data <= filtre.data_fi))
 

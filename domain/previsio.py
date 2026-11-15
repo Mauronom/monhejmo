@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional, Tuple
+from .categories import es_dins_algun
 from .recurrents import detectar_recurrents, clau_concepte, DIES_PER_MES, CENTIMS
 
 CONCEPTE_VARIABLE = "Despesa variable (mediana mensual)"
@@ -251,7 +252,7 @@ def preveure(moviments, criteris_despeses, criteris_ingressos, config, suposits=
     ingressos = [r for r in detectar_recurrents(moviments, criteris_ingressos, data_inici, ingressos=True)
                  if r.activa]
     despeses = [r for r in detectar_recurrents(moviments, criteris_despeses, data_inici) if r.activa]
-    nets = resta_mensual([m for m in moviments if m.categoria not in config.categories_excloses],
+    nets = resta_mensual([m for m in moviments if not es_dins_algun(m.categoria, config.categories_excloses)],
                          ingressos + despeses, data_inici, config.mesos_historic)
     variable = Decimal(statistics.median(nets)) if nets else Decimal(0)
 

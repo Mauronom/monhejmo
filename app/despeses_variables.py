@@ -13,8 +13,9 @@ class CalcularDespesesVariables:
         self._config_despeses_fixes = config_despeses_fixes
         self._config = config
 
-    def execute(self, filtre):
+    def execute(self, filtre, nivell=None):
+        """`nivell`: a quin nivell de l'arbre de categories s'agrupa (None, a la categoria més concreta)."""
         tots = self._sessio.actuals()
         recurrents = detectar_recurrents(tots, self._config_despeses_fixes.get_criteris())
         return calcular_despeses_variables(filtrar_moviments(tots, filtre), recurrents,
-                                           self._config.get_criteris(), filtre.data_inici, filtre.data_fi)
+                                           self._config.get_criteris(), filtre.data_inici, filtre.data_fi, nivell)

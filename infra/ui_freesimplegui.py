@@ -1,10 +1,13 @@
 from datetime import datetime
 from decimal import Decimal
 from decimal import InvalidOperation
-from domain import (CATEGORIA_PER_DEFECTE, CategoriaInvalida, FiltreMoviments, parsejar_paraules_clau,
+from domain import (CATEGORIA_PER_DEFECTE, CategoriaInvalida, FiltreMoviments, parsejar_paraules_clau, nodes_categories,
+                    profunditat_maxima,
                     PERIODICITATS, Suposit, SupositInvalid, FixAcabat, PagamentEfectiu)
 
 TOTES = "Totes"  # Opció del desplegable que vol dir "sense filtre de categoria"
+DETALL = "Detall"  # Opció del desplegable de nivells que vol dir "la categoria més concreta"
+PREFIX_NIVELL = "Nivell "
 
 
 def llegir_data(text):
@@ -16,6 +19,11 @@ def llegir_data(text):
         return datetime.strptime(text, "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def valors_combo_categories(categories):
+    """Valors del desplegable de categories: tots els nodes de l'arbre, i després "altres" i "Totes"."""
+    return nodes_categories(categories) + [CATEGORIA_PER_DEFECTE, TOTES]
 
 
 def construir_filtre(text, data_inici, data_fi, categoria):
@@ -46,6 +54,16 @@ def files_despeses_categoria(despeses):
 def files_despeses_puntuals(despeses):
     """Files de la taula de despeses puntuals grosses (l'import en positiu)."""
     return [[str(m.data), m.concepte, m.banc, m.categoria, f"{-m.import_:.2f}"] for m in despeses.puntuals]
+
+
+def valors_combo_nivells(profunditat):
+    """Nivells per agrupar les despeses variables: el detall i cada nivell per sobre del més profund."""
+    return [DETALL] + [f"{PREFIX_NIVELL}{n}" for n in range(1, profunditat)]
+
+
+def llegir_nivell(valor):
+    """El nivell triat al desplegable, o None per al detall."""
+    return int(valor[len(PREFIX_NIVELL):]) if valor.startswith(PREFIX_NIVELL) else None
 
 
 def text_resum_despeses_variables(despeses):
@@ -280,7 +298,7 @@ class UIFreeSimpleGUI:
         return self._casos.llistar_categories.execute()
 
     def _valors_combo_categories(self):
-        return list(self._categories().keys()) + [CATEGORIA_PER_DEFECTE, TOTES]
+        return valors_combo_categories(self._categories())
 
     def _files_taula_categories(self):
         """Files de la taula de categories, en el mateix ordre que el repositori."""
@@ -455,10 +473,15 @@ class UIFreeSimpleGUI:
         """Mostra la despesa del dia a dia dels moviments del filtre actual, per categories."""
         import FreeSimpleGUI as sg
 
-        despeses = self._casos.despeses_variables.execute(self._filtre_actual())
+        filtre = self._filtre_actual()
+        despeses = self._casos.despeses_variables.execute(filtre)
+        nivells = valors_combo_nivells(profunditat_maxima(c.categoria for c in despeses.per_categoria))
         layout = [
             [sg.Text("Despesa del dia a dia (dels moviments del filtre actual): sense les despeses fixes, "
                      "els traspassos ni les categories excloses.")],
+            [sg.Text("Agrupar per:"),
+             sg.Combo(nivells, default_value=DETALL, key="-NIVELL-", readonly=True, enable_events=True,
+                      disabled=len(nivells) == 1)],
             [sg.Table(
                 values=files_despeses_categoria(despeses),
                 headings=["Categoria", "Total (€)", "€/mes", "Moviments", "% del total"],
@@ -488,9 +511,12 @@ class UIFreeSimpleGUI:
 
         window = sg.Window("Despeses variables", layout, modal=True, finalize=True, resizable=True, size=(1100, 700))
         while True:
-            event, _ = window.read()
+            event, values = window.read()
             if event in (sg.WIN_CLOSED, "-BTN_TANCAR-"):
                 break
+            if event == "-NIVELL-":
+                agrupades = self._casos.despeses_variables.execute(filtre, llegir_nivell(values["-NIVELL-"]))
+                window["-TAULA_CATEGORIES-"].update(values=files_despeses_categoria(agrupades))
         window.close()
 
     # --- Previsió ----------------------------------------------------------------
