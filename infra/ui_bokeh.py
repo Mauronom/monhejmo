@@ -27,6 +27,10 @@ def inicis_de_mes_entre(inici, fi):
     return resultat
 
 
+# Prou baixa perquè hi càpiga sencera en la pantalla d'un portàtil, amb la barra del navegador
+ALCADA_GRAFICA = 600
+
+
 def _ms(dia):
     """Mil·lisegons des de 1970 (com Bokeh representa les dates de l'eix)."""
     return (datetime.combine(dia, datetime.min.time()) - datetime(1970, 1, 1)).total_seconds() * 1000
@@ -55,8 +59,8 @@ class UIBokeh:
         # Crear la figura
         p = figure(
             x_axis_type="datetime",
-            width=1800,
-            height=900,
+            sizing_mode="stretch_width",  # ocupa l'amplada del navegador, sigui quina sigui
+            height=ALCADA_GRAFICA,
             title=dades.get("titol", "Evolució per banc"),
             tools="pan,wheel_zoom,box_zoom,reset,save"
         )
