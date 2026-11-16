@@ -238,6 +238,39 @@ def test_no_ajunta_conceptes_curts_ni_que_difereixen_en_mes_d_una_paraula():
     assert len(detectar_recurrents(moviments, CriterisRecurrents())) == 4
 
 
+def test_clau_concepte_treu_els_noms_dels_mesos():
+    assert clau_concepte("OP. PLAN SEGURO CUOTA MAYO PLAN") == clau_concepte("OP. PLAN SEGURO CUOTA SEPTIEMBRE PLAN")
+    assert clau_concepte("R/ QUOTA MARÇ ESCOLA") == clau_concepte("R/ QUOTA SETEMBRE ESCOLA") == "r quota mes escola"
+
+
+def test_un_concepte_amb_un_mes_no_ajunta_altres_conceptes_que_hi_afegeixen_una_paraula():
+    # Sense el mes, "TRANSF SEPA tranf juliol" seria "transf sepa tranf" i s'hi ajuntarien la resta
+    moviments = (_mensuals("TRANSF.SEPA NACIONAL tranf juliol", [-500] * 4)
+                 + _mensuals("TRANSF.SEPA NACIONAL tranf cuina", [-500] * 4, mes_inici=5)
+                 + _mensuals("TRANSF.SEPA NACIONAL tranf diners", [-500] * 4, mes_inici=9))
+
+    assert len(detectar_recurrents(moviments, CriterisRecurrents())) == 3
+
+
+def test_ajunta_conceptes_amb_la_darrera_paraula_tallada_a_llocs_diferents():
+    # Com que el nom del mes canvia de llargada, el banc talla el final del concepte a llocs diferents
+    mesos = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO"]
+    finals = ["SEGUR", "SEGUR", "SEGUR", "SEGUR", "SEGUR", "SEGU"]
+    moviments = [_mov(date(2025, i + 2, 1), f"OP. PLAN UNI SEGURO CUOTA {mes} PLAN UNI {final}", -140)
+                 for i, (mes, final) in enumerate(zip(mesos, finals))]
+    moviments[2] = _mov(date(2025, 4, 1), "OP. PLAN UNI SEGURO CUOTA MARZO PLAN UNI SEG", -140)
+
+    [despesa] = detectar_recurrents(moviments, CriterisRecurrents())
+
+    assert despesa.carrecs == 6 and despesa.import_habitual == Decimal(140)
+
+
+def test_no_ajunta_conceptes_amb_la_darrera_paraula_diferent():
+    moviments = _mensuals("BIZUM A: ANNA PUIG FERRER", [-30] * 4) + _mensuals("BIZUM A: ANNA PUIG FONT", [-30] * 4)
+
+    assert len(detectar_recurrents(moviments, CriterisRecurrents())) == 2
+
+
 def test_despres_d_un_salt_llarg_l_import_i_l_interval_son_els_dels_carrecs_recents():
     # Una primera visita al març i, des del juliol, 120 € cada mes
     dates = [date(2026, 3, 11), date(2026, 7, 2), date(2026, 7, 31), date(2026, 9, 1), date(2026, 10, 1), date(2026, 11, 3)]

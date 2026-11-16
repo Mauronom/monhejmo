@@ -47,11 +47,19 @@ class MovimentRecurrent:
     moviments: Tuple = field(default=(), compare=False, repr=False)  # els càrrecs, tal com són
 
 
+# Els rebuts de vegades porten el mes al concepte (p. ex. "CUOTA MAYO"): per agrupar-los no compta quin
+# és. Es canvia per una paraula fixa (i no s'esborra) perquè "tranf juliol" no quedi en "tranf" i s'hi
+# ajuntin altres conceptes amb una paraula més ("tranf cuina")
+NOMS_DE_MESOS = re.compile(
+    r"\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre"
+    r"|gener|febrer|març|maig|juny|juliol|agost|setembre|novembre|desembre)\b")
+
+
 def clau_concepte(concepte):
-    """Concepte normalitzat per agrupar càrrecs: minúscules, sense números ni signes."""
+    """Concepte normalitzat per agrupar càrrecs: minúscules, sense números ni signes, i amb "mes" pel mes."""
     text = re.sub(r"\d+", "", concepte.lower())
     text = re.sub(r"[^\w\s]|_", " ", text)
-    return " ".join(text.split())
+    return " ".join(NOMS_DE_MESOS.sub("mes", text).split())
 
 
 def _conte_algun(concepte, textos):
@@ -104,19 +112,32 @@ MIN_PARAULES_CONCEPTE_TALLAT = 3
 
 def _ajuntar_conceptes_tallats(grups):
     """
-    El banc de vegades talla el mateix concepte de maneres diferents (p. ex. "BIZUM A: NOM COGNOM
-    Cog" i "BIZUM A: NOM COGNOM"). Dins d'un mateix banc, un concepte que és un altre més una sola
-    paraula al final s'ajunta amb el més curt, si aquest té com a mínim MIN_PARAULES_CONCEPTE_TALLAT
-    paraules (perquè no s'ajuntin conceptes genèrics).
+    El banc de vegades talla el mateix concepte de maneres diferents. Dins d'un mateix banc, i si el
+    concepte té més de MIN_PARAULES_CONCEPTE_TALLAT paraules (perquè no s'ajuntin conceptes
+    genèrics), s'ajunta amb un altre de més curt:
+    - si és l'altre més una sola paraula al final ("BIZUM A: NOM COGNOM Cog" i "BIZUM A: NOM COGNOM");
+    - si només canvia la darrera paraula i la de l'altre n'és el començament ("... PLAN UNI SEGUR" i
+      "... PLAN UNI SEG", quan el mes del concepte fa que es talli a llocs diferents).
     """
+    darreres = defaultdict(list)  # (banc, paraules menys la darrera) -> darreres paraules
+    for banc, clau in grups:
+        if " " in clau:
+            inici, darrera = clau.rsplit(" ", 1)
+            darreres[(banc, inici)].append(darrera)
+
+    def clau_ajuntada(banc, clau):
+        paraules = clau.split()
+        if len(paraules) <= MIN_PARAULES_CONCEPTE_TALLAT:
+            return clau
+        inici, darrera = " ".join(paraules[:-1]), paraules[-1]
+        if (banc, inici) in grups:
+            return inici
+        mes_curta = min((d for d in darreres[(banc, inici)] if darrera.startswith(d)), key=len)
+        return f"{inici} {mes_curta}"
+
     resultat = defaultdict(list)
     for (banc, clau), carrecs in grups.items():
-        paraules = clau.split()
-        curta = " ".join(paraules[:-1])
-        if len(paraules) > MIN_PARAULES_CONCEPTE_TALLAT and (banc, curta) in grups:
-            resultat[(banc, curta)].extend(carrecs)
-        else:
-            resultat[(banc, clau)].extend(carrecs)
+        resultat[(banc, clau_ajuntada(banc, clau))].extend(carrecs)
     return resultat
 
 
