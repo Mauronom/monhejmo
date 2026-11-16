@@ -352,12 +352,14 @@ def preveure(moviments, criteris_despeses, criteris_ingressos, config, suposits=
 
     data_inici = max(m.data for m in moviments)
     data_fi = sumar_mesos(data_inici, config.horitzo_mesos)
-    ingressos = [per_mesos_naturals(r, data_inici, config.mesos_historic)
-                 for r in detectar_recurrents(moviments, criteris_ingressos, data_inici, ingressos=True) if r.activa]
-    despeses = [per_mesos_naturals(r, data_inici, config.mesos_historic)
-                for r in detectar_recurrents(moviments, criteris_despeses, data_inici) if r.activa]
+    recurrents = (detectar_recurrents(moviments, criteris_ingressos, data_inici, ingressos=True),
+                  detectar_recurrents(moviments, criteris_despeses, data_inici))
+    ingressos, despeses = ([per_mesos_naturals(r, data_inici, config.mesos_historic) for r in rs if r.activa]
+                           for rs in recurrents)
+    # A la resta no hi compten els fixos, ni tan sols els que ja s'han acabat: si no, un ingrés que
+    # ja no es cobra (p. ex. una prestació) es continuaria preveient com si fos del dia a dia
     nets = resta_mensual([m for m in moviments if not es_dins_algun(m.categoria, config.categories_excloses)],
-                         ingressos + despeses, data_inici, config.mesos_historic)
+                         recurrents[0] + recurrents[1], data_inici, config.mesos_historic)
     variable = Decimal(statistics.median(nets)) if nets else Decimal(0)
 
     def futurs(acabats=()):

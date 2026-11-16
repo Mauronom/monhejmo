@@ -383,3 +383,17 @@ def test_sense_prou_historic_el_rang_surt_de_la_variacio_mensual():
     previsio = preveure(_historic(), CriterisRecurrents(), CriterisRecurrents(), ConfigPrevisio(horitzo_mesos=2))
 
     assert previsio.mostres_calibratge == 0
+
+
+def test_els_cobraments_d_un_fix_que_ja_s_ha_acabat_no_compten_a_la_resta():
+    # Una prestació de gener a juny que ja no es cobra: no és un ingrés del dia a dia que continuï
+    prestacio = [_mov(date(2025, mes, 5), "PRESTACIO", 1500) for mes in range(1, 7)]
+    # Imports prou diferents perquè el súper no sigui una despesa fixa: la mediana mensual és -300
+    super_ = [_mov(date(2025, mes, 10), "SUPER", -100 if mes % 2 else -500) for mes in range(1, 13)]
+    super_ += [_mov(date(2026, 1, 3), "FORN", -5)]  # perquè els 12 mesos del 2025 siguin complets
+
+    previsio = preveure(_amb_saldos(prestacio + super_), CriterisRecurrents(), CriterisRecurrents(),
+                        ConfigPrevisio(horitzo_mesos=1))
+
+    assert previsio.ingressos_fixos == ()  # ja no es cobra
+    assert previsio.variable_mensual == Decimal(-300)
