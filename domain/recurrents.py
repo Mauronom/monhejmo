@@ -43,6 +43,7 @@ class MovimentRecurrent:
     darrera: date
     activa: bool              # si es continua cobrant a la data de referència
     interval_dies: Decimal = Decimal(30)  # dies entre càrrecs, de mitjana
+    dia_del_mes: Optional[int] = None     # si es preveu un cop per mes natural, quin dia (vegeu la previsió)
     moviments: Tuple = field(default=(), compare=False, repr=False)  # els càrrecs, tal com són
 
 
@@ -130,7 +131,7 @@ def _es_regular(carrecs, criteris):
 FACTOR_SALT = 3
 
 
-def _carrecs_recents(carrecs):
+def carrecs_recents(carrecs):
     """
     Els càrrecs posteriors al darrer salt (un interval més de FACTOR_SALT vegades la mediana), que
     són els que reflecteixen com es cobra ara (p. ex. una primera visita i, mesos després, una quota
@@ -150,7 +151,7 @@ def _recurrent(carrecs, data_referencia, originals):
     carrecs = sorted(carrecs, key=lambda m: m.data)
     primer, darrer = carrecs[0], carrecs[-1]
     n = len(carrecs)
-    recents = _carrecs_recents(carrecs)
+    recents = carrecs_recents(carrecs)
     interval = max(Decimal((darrer.data - recents[0].data).days) / (len(recents) - 1), Decimal(1))
     import_habitual = -sum((m.import_ for m in recents), Decimal(0)) / len(recents)
     return MovimentRecurrent(

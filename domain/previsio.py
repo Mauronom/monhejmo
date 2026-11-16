@@ -1,11 +1,11 @@
 import calendar
 import statistics
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional, Tuple
 from .categories import es_dins_algun
-from .recurrents import detectar_recurrents, clau_concepte, DIES_PER_MES, CENTIMS
+from .recurrents import detectar_recurrents, clau_concepte, carrecs_recents, DIES_PER_MES, CENTIMS
 
 CONCEPTE_VARIABLE = "Despesa variable (mediana mensual)"
 MESOS_PER_PERIODICITAT = {"puntual": 0, "mensual": 1, "bimestral": 2, "trimestral": 3,
@@ -68,9 +68,10 @@ class Previsio:
     moviments: Tuple[MovimentPrevist, ...]                  # sense els supòsits
     moviments_amb_suposits: Tuple[MovimentPrevist, ...] = ()
     suposits: Tuple[Suposit, ...] = ()
-    amplada_mensual: Decimal = Decimal(0)  # meitat del rang interquartílic de la resta mensual
+    amplada_mensual: Decimal = Decimal(0)  # vegeu calibrar_amplada (o amplada_mensual si no hi ha prou històric)
     fixos_acabats: Tuple[FixAcabat, ...] = ()
     categories_excloses: Tuple[str, ...] = ()  # les que no compten a la resta de moviments
+    mostres_calibratge: int = 0  # previsions passades amb què s'ha calculat l'amplada (0: no n'hi havia)
 
     @property
     def te_suposits(self):
@@ -111,10 +112,75 @@ def saldo_actual(moviments):
     return sum(darrer.values(), Decimal(0))
 
 
+# Un recurrent es preveu per mes natural si es cobra com a molt cada MAX_DIES_MENSUAL dies i no més de
+# MAX_CARRECS_MES_NATURAL cops al mes: és un mensual amb alguna paga doble o que arriba partit en dos.
+MAX_DIES_MENSUAL = 45
+MAX_CARRECS_MES_NATURAL = 2
+
+
+def per_mesos_naturals(recurrent, data_referencia, mesos_historic=12):
+    """
+    Si el recurrent és mensual (vegeu MAX_DIES_MENSUAL), el mateix recurrent amb l'import mensual
+    d'un mes típic (la mediana del total de cada mes complet, comptant els mesos sense cap càrrec)
+    i el dia del mes en què es cobra normalment, perquè es prevegi un sol cop al mes. Si no ho és
+    (setmanal, bimestral...), tal com és. Els mesos van del següent al del primer càrrec (que pot
+    ser incomplet) fins a l'anterior al de data_referencia, com a molt mesos_historic. Només compten
+    els càrrecs des del darrer salt (p. ex. una visita solta i, mesos després, una quota mensual),
+    tret que després del salt només hi hagi un mes. Diversos càrrecs el mateix dia compten com un de
+    sol per decidir si és mensual.
+    """
+    if not recurrent.moviments:
+        return recurrent
+    tots = sorted(recurrent.moviments, key=lambda m: m.data)
+    carrecs = carrecs_recents(tots)
+    if len({_mes(m.data) for m in carrecs}) == 1:
+        carrecs = tots
+    mesos_amb_carrecs = {_mes(m.data) for m in carrecs}
+    dies_de_cobrament = {m.data for m in carrecs}
+    if (recurrent.interval_dies > MAX_DIES_MENSUAL
+            or len(dies_de_cobrament) > MAX_CARRECS_MES_NATURAL * len(mesos_amb_carrecs)):
+        return recurrent
+    inici_mes_actual = data_referencia.replace(day=1)
+    primer_mes = min(mesos_amb_carrecs)
+    mesos = [_mes(sumar_mesos(inici_mes_actual, -i)) for i in range(1, mesos_historic + 1)]
+    mesos = sorted(mes for mes in mesos if mes > primer_mes) or [primer_mes]
+    totals = dict.fromkeys(mesos, Decimal(0))
+    for m in carrecs:
+        if _mes(m.data) in totals:
+            totals[_mes(m.data)] += abs(m.import_)
+    dies = [m.data.day for m in carrecs if _mes(m.data) in totals] or [m.data.day for m in carrecs]
+    return replace(recurrent, import_mensual=Decimal(statistics.median(totals.values())).quantize(CENTIMS),
+                   dia_del_mes=statistics.median_low(dies))
+
+
+def _dia_del_mes(mes, dia):
+    """La data del dia indicat dins del mes (de qualsevol data del mes); si no existeix, el darrer del mes."""
+    return mes.replace(day=min(dia, calendar.monthrange(mes.year, mes.month)[1]))
+
+
+def _dates_del_fix(r, data_inici, fi):
+    """Dates futures (després de data_inici, fins a fi) en què es preveu cobrar el recurrent."""
+    if r.dia_del_mes:
+        # Un cop per mes natural; el mes en curs només si encara no s'ha cobrat i el dia no ha passat
+        mes = data_inici.replace(day=1)
+        if _mes(r.darrera) == _mes(data_inici) or _dia_del_mes(mes, r.dia_del_mes) <= data_inici:
+            mes = sumar_mesos(mes, 1)
+        while (data := _dia_del_mes(mes, r.dia_del_mes)) <= fi:
+            yield data
+            mes = sumar_mesos(mes, 1)
+        return
+    k = 1
+    while (data := r.darrera + timedelta(days=round(k * r.interval_dies))) <= fi:
+        if data > data_inici:
+            yield data
+        k += 1
+
+
 def moviments_fixos_previstos(recurrents, signe, data_inici, data_fi, fixos_acabats=()):
     """
     Càrrecs futurs (data, concepte, import) dels recurrents actius entre data_inici (exclosa) i
-    data_fi (inclosa): des del darrer càrrec, cada interval_dies. signe: 1 ingressos, -1 despeses.
+    data_fi (inclosa). Els que tenen dia_del_mes, un cop al mes amb l'import mensual; els altres,
+    des del darrer càrrec cada interval_dies amb l'import habitual. signe: 1 ingressos, -1 despeses.
     Els que estan a fixos_acabats ja no es cobren després de la seva data de fi.
     """
     previstos = []
@@ -123,11 +189,8 @@ def moviments_fixos_previstos(recurrents, signe, data_inici, data_fi, fixos_acab
             continue
         fi_del_fix = _data_fi_del_fix(r, fixos_acabats)
         fi = min(data_fi, fi_del_fix) if fi_del_fix else data_fi
-        k = 1
-        while (data := r.darrera + timedelta(days=round(k * r.interval_dies))) <= fi:
-            if data > data_inici:
-                previstos.append((data, r.concepte, signe * r.import_habitual))
-            k += 1
+        import_ = r.import_mensual if r.dia_del_mes else r.import_habitual
+        previstos += [(data, r.concepte, signe * import_) for data in _dates_del_fix(r, data_inici, fi)]
     return sorted(previstos, key=lambda p: p[0])
 
 
@@ -234,13 +297,53 @@ def resta_mensual(moviments, recurrents, data_referencia, mesos):
     return list(net.values())
 
 
-def preveure(moviments, criteris_despeses, criteris_ingressos, config, suposits=(), fixos_acabats=()):
+# Mesos de dades que cal tenir abans d'una data per fer-hi una previsió de calibratge
+MIN_MESOS_CALIBRATGE = 6
+
+
+def calibrar_amplada(moviments, criteris_despeses, criteris_ingressos, config):
+    """
+    Com s'haurien equivocat les previsions fetes l'1 de cada mes dels darrers mesos_historic mesos
+    (amb només els moviments d'abans), a cada horitzó fins avui: l'error, dividit per l'arrel dels
+    mesos, es comporta com l'amplada_mensual. Retorna (mediana d'aquests errors, quantes mostres),
+    o (0, 0) si no hi ha cap data amb MIN_MESOS_CALIBRATGE mesos de dades abans. Al saldo real s'hi
+    tornen a sumar les categories excloses, que la previsió no compta.
+    """
+    moviments = sorted(moviments, key=lambda m: m.data)
+    primera, darrera = moviments[0].data, moviments[-1].data
+    mes_actual = darrera.replace(day=1)
+    talls = [sumar_mesos(mes_actual, -i) for i in range(config.mesos_historic, 0, -1)]
+    talls = [t for t in talls if t >= sumar_mesos(primera.replace(day=1), MIN_MESOS_CALIBRATGE)]
+
+    def real_a(data, des_de):
+        excloses = sum((m.import_ for m in moviments if des_de < m.data <= data
+                        and es_dins_algun(m.categoria, config.categories_excloses)), Decimal(0))
+        return saldo_actual([m for m in moviments if m.data <= data]) - excloses
+
+    errors = []
+    for tall in talls:
+        previsio = preveure([m for m in moviments if m.data < tall], criteris_despeses, criteris_ingressos,
+                            config, calibrar=False)
+        for mesos in range(1, config.horitzo_mesos + 1):
+            data = sumar_mesos(previsio.data_inici, mesos)
+            if data > darrera:
+                break
+            error = previsio.saldo_a(data) - real_a(data, previsio.data_inici)
+            errors.append(abs(error) / Decimal(mesos).sqrt())
+    if not errors:
+        return Decimal(0), 0
+    return Decimal(statistics.median(errors)), len(errors)
+
+
+def preveure(moviments, criteris_despeses, criteris_ingressos, config, suposits=(), fixos_acabats=(),
+             calibrar=True):
     """
     Previsió del saldo total (sense els bancs exclosos) des del darrer moviment fins a
     horitzo_mesos després: els ingressos i despeses fixos actius es repeteixen amb el seu
     interval, i cada mes s'hi suma la despesa variable (mediana mensual de la resta).
     També es calcula la previsió amb els supòsits (moviments nous i fixos que s'acaben), per
-    comparar-les, i l'amplada mensual per al rang probable.
+    comparar-les, i l'amplada mensual per al rang probable: amb calibrar, a partir dels errors de
+    les previsions passades (calibrar_amplada) si n'hi ha; si no, de la variació de la resta mensual.
     """
     suposits, fixos_acabats = tuple(suposits), tuple(fixos_acabats)
     moviments = [m for m in moviments if m.banc not in config.bancs_exclosos]
@@ -249,9 +352,10 @@ def preveure(moviments, criteris_despeses, criteris_ingressos, config, suposits=
 
     data_inici = max(m.data for m in moviments)
     data_fi = sumar_mesos(data_inici, config.horitzo_mesos)
-    ingressos = [r for r in detectar_recurrents(moviments, criteris_ingressos, data_inici, ingressos=True)
-                 if r.activa]
-    despeses = [r for r in detectar_recurrents(moviments, criteris_despeses, data_inici) if r.activa]
+    ingressos = [per_mesos_naturals(r, data_inici, config.mesos_historic)
+                 for r in detectar_recurrents(moviments, criteris_ingressos, data_inici, ingressos=True) if r.activa]
+    despeses = [per_mesos_naturals(r, data_inici, config.mesos_historic)
+                for r in detectar_recurrents(moviments, criteris_despeses, data_inici) if r.activa]
     nets = resta_mensual([m for m in moviments if not es_dins_algun(m.categoria, config.categories_excloses)],
                          ingressos + despeses, data_inici, config.mesos_historic)
     variable = Decimal(statistics.median(nets)) if nets else Decimal(0)
@@ -269,5 +373,9 @@ def preveure(moviments, criteris_despeses, criteris_ingressos, config, suposits=
     if suposits or fixos_acabats:
         amb_suposits = _acumular(saldo_inicial, futurs(fixos_acabats)
                                  + moviments_suposits(suposits, data_inici, data_fi))
+    amplada, mostres = (calibrar_amplada(moviments, criteris_despeses, criteris_ingressos, config)
+                        if calibrar else (Decimal(0), 0))
+    if not mostres:
+        amplada = amplada_mensual(nets)
     return Previsio(data_inici, saldo_inicial, variable, tuple(ingressos), tuple(despeses), base,
-                    amb_suposits, suposits, amplada_mensual(nets), fixos_acabats, tuple(config.categories_excloses))
+                    amb_suposits, suposits, amplada, fixos_acabats, tuple(config.categories_excloses), mostres)

@@ -247,3 +247,14 @@ def test_valors_combo_nivells(profunditat, esperat):
 def test_llegir_nivell(valor, esperat):
     from infra.ui_freesimplegui import llegir_nivell
     assert llegir_nivell(valor) == esperat
+
+
+def test_text_resum_previsio_diu_d_on_surt_el_rang_quan_esta_calibrat():
+    from app import ResultatPrevisio
+    from infra.ui_freesimplegui import text_resum_previsio
+
+    base = _resultat_previsio()
+    previsio = type(base.previsio)(**{**base.previsio.__dict__, "mostres_calibratge": 42})
+
+    assert "Saldo previst (i rang probable, segons l'error de 42 previsions passades):\n" in \
+        text_resum_previsio(ResultatPrevisio(previsio, {}, base.resum))

@@ -102,3 +102,46 @@ def test_el_resultat_dona_el_saldo_dels_bancs_exclosos():
     resultat = _cas(_historic()).execute()
 
     assert resultat.saldos_exclosos == {"SIALP": Decimal(5000)}
+
+
+def _historic_llarg(mesos=12):
+    moviments, saldo = [], Decimal(1000)
+    for i in range(mesos):
+        any_, mes = 2025 + i // 12, i % 12 + 1
+        for dia, concepte, import_ in ((1, "R/ LLOGUER", -800), (28, "NOMINA", 2000)):
+            saldo += import_
+            moviments.append(Moviment(date(any_, mes, dia), concepte, import_, saldo, "A"))
+    return moviments
+
+
+def test_la_grafica_mostra_la_previsio_que_s_hauria_fet_fa_6_mesos():
+    resultat = _cas(_historic_llarg()).execute()
+
+    punts = resultat.grafica["punts"]
+    passada = [p for p in punts if p.banc == "Previsió de fa 6 mesos"]
+    real = {p.data: p.saldo for p in punts if p.banc == "Total"}
+    # Comença al saldo real del darrer moviment d'abans de fa 6 mesos (el 28 de juny) i arriba fins avui
+    assert (passada[0].data, passada[0].saldo) == (date(2025, 6, 28), real[date(2025, 6, 28)])
+    assert passada[-1].data == date(2025, 12, 28)
+    # Amb un històric tan regular, encerta el saldo d'avui
+    assert passada[-1].saldo == real[date(2025, 12, 28)]
+    assert "Previsió de fa 6 mesos" in resultat.grafica["linies_discontinues"]
+
+
+def test_sense_dades_de_fa_6_mesos_no_hi_ha_previsio_passada():
+    resultat = _cas(_historic()).execute()
+
+    assert "Previsió de fa 6 mesos" not in {p.banc for p in resultat.grafica["punts"]}
+
+
+def test_la_previsio_passada_inclou_les_categories_excloses_que_van_passar_com_si_fossin_suposits():
+    moviments = _historic_llarg()
+    saldo_obres = moviments[-1].balance - 5000
+    moviments.append(Moviment(date(2025, 12, 29), "REFORMA", Decimal(-5000), saldo_obres, "A", "obres"))
+    config = ConfigPrevisio(horitzo_mesos=6, categories_excloses=("obres",))
+
+    resultat = _cas(moviments, config).execute()
+
+    passada = [p for p in resultat.grafica["punts"] if p.banc == "Previsió de fa 6 mesos"]
+    assert "REFORMA" in [p.concepte for p in passada]
+    assert passada[-1].saldo == saldo_obres  # amb la reforma, encerta el saldo d'avui

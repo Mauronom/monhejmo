@@ -65,6 +65,8 @@ Abans, `python3 scripts/comprovar_dades.py` ha de dir OK.
 - [ ] El supòsit es manté en tancar i tornar a obrir l'aplicació (és a `config.json`, secció `previsio`).
 - [ ] "Eliminar supòsit" sense fila seleccionada avisa; amb fila, demana confirmació i desapareix.
 - [ ] El resum dona per a cada saldo previst el rang probable ("entre X i Y"), i la gràfica té la franja grisa "Rang probable" que s'eixampla amb el temps.
+- [ ] El resum diu "rang probable, segons l'error de N previsions passades", i els ingressos fixos (p. ex. la nòmina) surten un cop al mes a la gràfica.
+- [ ] La gràfica té una línia discontínua "Previsió de fa 6 mesos" que surt del saldo real de fa 6 mesos i arriba fins avui, al costat del saldo real.
 - [ ] "Acabar un fix": el desplegable mostra els ingressos i despeses fixos actius; sense triar-ne cap o amb una data dolenta surt un error; amb dades bones surt a la taula i al "Inclou els supòsits" del resum.
 - [ ] "Eliminar fix acabat" sense fila seleccionada avisa; amb fila, demana confirmació i desapareix.
 

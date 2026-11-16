@@ -107,8 +107,8 @@ def test_preveure_suma_els_fixos_i_la_variable_de_cada_mes():
         (date(2025, 7, 1), "R/ LLOGUER", Decimal(-800)),
         (date(2025, 7, 28), "NOMINA", Decimal(2000)),
         (date(2025, 7, 28), "Despesa variable (mediana mensual)", Decimal(-300)),
-        (date(2025, 7, 31), "R/ LLOGUER", Decimal(-800)),
-        (date(2025, 8, 27), "NOMINA", Decimal(2000)),
+        (date(2025, 8, 1), "R/ LLOGUER", Decimal(-800)),
+        (date(2025, 8, 28), "NOMINA", Decimal(2000)),
         (date(2025, 8, 28), "Despesa variable (mediana mensual)", Decimal(-300)),
     ]
     assert previsio.moviments[-1].saldo == previsio.saldo_inicial + 2 * (2000 - 800 - 300)
@@ -223,8 +223,8 @@ def test_un_fix_que_s_acaba_desapareix_de_la_linia_amb_suposits():
                         ConfigPrevisio(horitzo_mesos=2, bancs_exclosos=("SIALP",)), fixos_acabats=[fi_lloguer])
 
     lloguers = [m.data for m in previsio.moviments_amb_suposits if m.concepte == "R/ LLOGUER"]
-    assert lloguers == [date(2025, 7, 1)]  # el del 31 de juliol ja no hi és
-    assert [m.data for m in previsio.moviments if m.concepte == "R/ LLOGUER"] == [date(2025, 7, 1), date(2025, 7, 31)]
+    assert lloguers == [date(2025, 7, 1)]  # el de l'1 d'agost ja no hi és
+    assert [m.data for m in previsio.moviments if m.concepte == "R/ LLOGUER"] == [date(2025, 7, 1), date(2025, 8, 1)]
     assert previsio.saldo_a(date(2025, 8, 28), amb_suposits=True) == previsio.saldo_a(date(2025, 8, 28)) + 800
     assert previsio.fixos_acabats == (fi_lloguer,)
 
@@ -271,3 +271,115 @@ def test_les_categories_excloses_no_compten_a_la_resta_de_moviments():
     assert sense_obres.variable_mensual == Decimal(-300)
     assert sense_obres.saldo_inicial == amb_obres.saldo_inicial  # el saldo actual sí que les té
     assert sense_obres.categories_excloses == ("obres",)
+
+
+# --- Fixos per mes natural ------------------------------------------------------------------
+
+def _ingressos(previsio, concepte):
+    return [(m.data, m.import_) for m in previsio.moviments if m.concepte == concepte]
+
+
+def test_un_ingres_mensual_amb_alguna_paga_doble_es_preveu_un_cop_al_mes_amb_l_import_d_un_mes_tipic():
+    moviments = [_mov(date(2025, mes, 28), "NOMINA", 2000) for mes in range(1, 11)]
+    moviments += [_mov(date(2025, 6, 20), "NOMINA", 2000)]  # paga extra
+
+    previsio = preveure(_amb_saldos(moviments), CriterisRecurrents(), CriterisRecurrents(),
+                        ConfigPrevisio(horitzo_mesos=2))
+
+    assert _ingressos(previsio, "NOMINA") == [(date(2025, 11, 28), Decimal(2000)), (date(2025, 12, 28), Decimal(2000))]
+    assert previsio.ingressos_fixos[0].import_mensual == Decimal(2000)
+
+
+def test_un_ingres_mensual_que_arriba_partit_en_dos_dies_es_preveu_sencer_un_cop_al_mes():
+    moviments = []
+    for mes in range(1, 7):
+        moviments += [_mov(date(2025, mes, 10), "PRESTACIO", 1200), _mov(date(2025, mes, 11), "PRESTACIO", 1275)]
+
+    previsio = preveure(_amb_saldos(moviments), CriterisRecurrents(), CriterisRecurrents(incloure=("PRESTACIO",)),
+                        ConfigPrevisio(horitzo_mesos=2))
+
+    assert _ingressos(previsio, "PRESTACIO") == [(date(2025, 7, 10), Decimal(2475)), (date(2025, 8, 10), Decimal(2475))]
+    assert previsio.ingressos_fixos[0].import_mensual == Decimal(2475)
+
+
+def test_un_mensual_que_aquest_mes_encara_no_ha_arribat_es_preveu_aquest_mateix_mes():
+    moviments = [_mov(date(2025, mes, 28), "NOMINA", 2000) for mes in range(1, 7)]
+    moviments += [_mov(date(2025, 7, 3), "SUPER", -50)]
+
+    previsio = preveure(_amb_saldos(moviments), CriterisRecurrents(), CriterisRecurrents(),
+                        ConfigPrevisio(horitzo_mesos=1))
+
+    assert _ingressos(previsio, "NOMINA") == [(date(2025, 7, 28), Decimal(2000))]
+
+
+def test_un_mensual_que_va_comencar_despres_d_un_carrec_solt_no_compta_els_mesos_d_abans():
+    # Una visita al març i, des de l'agost, una quota mensual: els mesos buits del mig no compten
+    moviments = [_mov(date(2025, 3, 11), "PSICOLEG", -80)]
+    moviments += [_mov(date(2025, mes, 1), "PSICOLEG", -120) for mes in range(8, 12)]
+    moviments += [_mov(date(2025, 11, 20), "SUPER", -10)]
+
+    previsio = preveure(_amb_saldos(moviments), CriterisRecurrents(), CriterisRecurrents(),
+                        ConfigPrevisio(horitzo_mesos=1))
+
+    assert previsio.despeses_fixes[0].import_mensual == Decimal(120)
+
+
+def test_uns_quants_cobraments_el_mateix_dia_no_es_repeteixen_cada_dia():
+    # Endarreriments d'una prestació: diversos cobraments el mateix dia
+    imports = [(date(2025, 4, 3), 2500), (date(2025, 4, 30), 3000), (date(2025, 4, 30), 3500),
+               (date(2025, 5, 30), 2800), (date(2025, 5, 30), 2300), (date(2025, 5, 30), 3200)]
+    moviments = [_mov(data, "PRESTACIO", import_) for data, import_ in imports]
+
+    previsio = preveure(_amb_saldos(moviments), CriterisRecurrents(), CriterisRecurrents(incloure=("PRESTACIO",)),
+                        ConfigPrevisio(horitzo_mesos=2))
+
+    dates = [d for d, _ in _ingressos(previsio, "PRESTACIO")]
+    assert len(dates) == len({(d.year, d.month) for d in dates})  # com a molt un cop al mes
+
+
+def test_una_despesa_setmanal_continua_sent_setmanal():
+    moviments = [_mov(date(2025, 3, 3) + timedelta(days=7 * i), "CANGUR", -200) for i in range(17)]  # fins al 23/6
+
+    previsio = preveure(_amb_saldos(moviments), CriterisRecurrents(max_carrecs_per_mes=5), CriterisRecurrents(),
+                        ConfigPrevisio(horitzo_mesos=1))
+
+    dates = [d for d, _ in _ingressos(previsio, "CANGUR")]
+    assert dates == [date(2025, 6, 30) + timedelta(days=7 * i) for i in range(4)]
+
+
+# --- Rang probable calibrat amb previsions passades ------------------------------------------
+
+def _historic_llarg(mesos=16, sorpreses=()):
+    """Nòmina el 28, lloguer l'1 i súper el 10 i el 20; `sorpreses`: {mes: import} imprevistos el dia 15."""
+    moviments = []
+    for i in range(mesos):
+        inici = sumar_mesos(date(2024, 1, 1), i)
+        moviments += [_mov(inici, "R/ LLOGUER", -800), _mov(inici.replace(day=10), "SUPER", -100),
+                      _mov(inici.replace(day=20), "SUPER", -200), _mov(inici.replace(day=28), "NOMINA", 2000)]
+        if i in dict(sorpreses):
+            moviments.append(_mov(inici.replace(day=15), "IMPREVIST", -dict(sorpreses)[i]))
+    return _amb_saldos(moviments, Decimal(1000))
+
+
+def test_si_les_previsions_passades_haguessin_encertat_el_rang_es_zero():
+    previsio = preveure(_historic_llarg(), CriterisRecurrents(), CriterisRecurrents(), ConfigPrevisio(horitzo_mesos=3))
+
+    assert previsio.mostres_calibratge > 0
+    assert previsio.amplada_mensual == Decimal(0)
+
+
+def test_el_rang_surt_dels_errors_de_les_previsions_passades():
+    # Imprevistos que la mediana de la resta no veu: les previsions passades s'equivoquen
+    sorpreses = {7: 900, 9: 1200, 11: 600, 13: 1500}
+
+    previsio = preveure(_historic_llarg(sorpreses=sorpreses), CriterisRecurrents(), CriterisRecurrents(),
+                        ConfigPrevisio(horitzo_mesos=3))
+
+    assert previsio.mostres_calibratge > 0
+    assert previsio.amplada_mensual > 0
+
+
+def test_sense_prou_historic_el_rang_surt_de_la_variacio_mensual():
+    previsio = preveure(_historic(), CriterisRecurrents(), CriterisRecurrents(), ConfigPrevisio(horitzo_mesos=2))
+
+    assert previsio.mostres_calibratge == 0

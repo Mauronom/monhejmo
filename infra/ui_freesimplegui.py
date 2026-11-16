@@ -92,7 +92,9 @@ def text_resum_previsio(resultat):
         suposits = [f"{s.concepte} ({s.import_:.2f} € {s.periodicitat})" for s in previsio.suposits]
         suposits += [f"{f.concepte} s'acaba el {f.data_fi}" for f in previsio.fixos_acabats]
         linies.append("Inclou els supòsits: " + "; ".join(suposits))
-    linies += ["", "Saldo previst (i rang probable):"]
+    calibratge = (f", segons l'error de {previsio.mostres_calibratge} previsions passades"
+                  if previsio.mostres_calibratge else "")
+    linies += ["", f"Saldo previst (i rang probable{calibratge}):"]
     linies += [f"  d'aquí a {r.mesos} mesos ({r.data}): {r.saldo:.2f} € "
                f"(entre {r.saldo - r.marge:.2f} i {r.saldo + r.marge:.2f})" for r in resultat.resum]
     return "\n".join(linies)

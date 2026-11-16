@@ -19,8 +19,12 @@ Totes les dades es queden al teu ordinador: l'aplicació no es connecta a cap ba
 - **Despeses i ingressos fixos**: detecta els càrrecs i els cobraments que es repeteixen (rebuts,
   nòmines, quotes...), amb la periodicitat i el cost o l'ingrés mensual.
 - **Previsió**: estima el saldo total dels propers mesos a partir dels fixos i de la resta de
-  moviments habituals (mediana mensual), amb un rang probable que s'eixampla amb el temps. S'hi poden
-  afegir supòsits (una despesa o un ingrés nou, puntual o periòdic) i indicar fixos que s'acaben.
+  moviments habituals (mediana mensual). Els fixos mensuals es preveuen un cop per mes natural amb
+  l'import d'un mes típic, encara que algun mes es cobrin dos cops. El rang probable surt de com
+  s'haurien equivocat les previsions fetes cada mes de l'últim any, i s'eixampla amb el temps. La
+  gràfica també mostra la previsió que s'hauria fet fa 6 mesos, per veure si encerta el saldo real
+  (hi entren les obres i altres categories excloses que hi ha hagut, com si fossin supòsits). S'hi
+  poden afegir supòsits (una despesa o un ingrés nou, puntual o periòdic) i indicar fixos que s'acaben.
 - **Pagaments en efectiu**: permet declarar pagaments fixos que es fan amb diners del caixer (p. ex.
   la neteja de casa) perquè surtin com a despesa amb la seva categoria i no només com a "efectiu".
 
