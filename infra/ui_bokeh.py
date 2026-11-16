@@ -1,5 +1,8 @@
+import math
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from itertools import accumulate
+from domain import sumar_per_node
 
 
 def hores_dels_punts(punts):
@@ -34,6 +37,46 @@ ALCADA_GRAFICA = 600
 def _ms(dia):
     """Mil·lisegons des de 1970 (com Bokeh representa les dates de l'eix)."""
     return (datetime.combine(dia, datetime.min.time()) - datetime(1970, 1, 1)).total_seconds() * 1000
+
+
+COLORS_PASTIS = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22',
+    '#17becf', '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d3', '#c7c7c7',
+    '#dbdb8d', '#9edae5',
+]
+
+
+def desglossos_categories(imports):
+    """
+    {node: {fill: import}} per a l'arrel ("") i per a cada node que té subcategories, perquè la
+    gràfica de categories pugui desglossar qualsevol porció sense tornar a calcular res.
+    """
+    resultat = {}
+
+    def afegir(node):
+        fills = sumar_per_node(imports, node or None)
+        resultat[node] = fills
+        for fill in fills:
+            if fill != node and set(sumar_per_node(imports, fill)) != {fill}:
+                afegir(fill)
+
+    afegir("")
+    return resultat
+
+
+def columnes_pastis(valors):
+    """Columnes d'un diagrama circular a partir de {categoria: import} (es fa servir el valor absolut)."""
+    quantitats = [abs(v) for v in valors.values()]
+    total = sum(quantitats)
+    finals = list(accumulate(q / total * 2 * math.pi for q in quantitats)) if total else []
+    return {
+        "categoria": list(valors),
+        "quantitat": quantitats,
+        "percentatge": [round(q / total * 100, 2) for q in quantitats] if total else [],
+        "angle_start": [0.0] + finals[:-1] if finals else [],
+        "angle_end": finals,
+        "color": [COLORS_PASTIS[i % len(COLORS_PASTIS)] for i in range(len(quantitats))],
+    }
 
 
 class UIBokeh:
@@ -114,123 +157,66 @@ class UIBokeh:
 
         show(p)
     
-    def mostrar_grafica_categories(self, despeses_dict, titol="Distribució de Despeses", 
-                               width=400, height=400):
+    def mostrar_grafica_categories(self, despeses_dict, titol="Distribució de Despeses", width=500, height=500):
         """
-        Genera un diagrama circular amb les despeses (valors negatius) i ingressos (valor positiu)
-        
-        Args:
-            despeses_dict (dict): Diccionari amb categories com a claus i quantitats negatives com a valors
-            ingressos (float): Quantitat positiva d'ingressos
-            titol (str): Títol del gràfic
-            width (int): Amplada del gràfic
-            height (int): Alçada del gràfic
-            
-        Returns:
-            bokeh.plotting.figure: El gràfic de Bokeh
+        Diagrama circular de les despeses per categoria (despeses_dict: {categoria: import net}), al
+        primer nivell de l'arbre. En clicar una porció, al costat surt un altre diagrama amb el seu
+        desglòs; clicant-hi una porció que tingui subcategories, es baixa un nivell més. Tot es
+        calcula aquí i el clic es resol al navegador, perquè la gràfica és un HTML estàtic.
         """
         from bokeh.plotting import figure, show
-        from bokeh.models import HoverTool
-        from bokeh.transform import cumsum
-        import pandas as pd
-        import math
-        # Preparar les dades
-        data = {}
-        
-        # Convertir despeses a valors positius per al càlcul de percentatges
-        despeses_positives = {k: abs(v) for k, v in despeses_dict.items()}
-                
-        # Afegir despeses
-        data.update(despeses_positives)
-        
-        # Calcular el total
-        total = sum(data.values())
-        
-        # Crear DataFrame
-        categories = list(data.keys())
-        quantitats = list(data.values())
-        percentatges = [round((q / total) * 100, 2) for q in quantitats]
-        
-        # Calcular angles per al diagrama circular
-        angles = [round((q / total) * 2 * math.pi, 4) for q in quantitats]
-        
-        df = pd.DataFrame({
-            'categoria': categories,
-            'quantitat': quantitats,
-            'percentatge': percentatges,
-            'angle': angles,
-            'color': self._generar_colors(len(categories))
-        })
-        
-        # Calcular angles acumulatius
-        df['angle_end'] = df['angle'].cumsum()
-        df['angle_start'] = df['angle_end'] - df['angle']
-        
-        # Crear el gràfic
-        p = figure(
-            height=height, 
-            width=width, 
-            title=titol,
-            toolbar_location=None,
-            tools="",
-            x_range=(-1.1, 1.1),
-            y_range=(-1.1, 1.1)
-        )
-        
-        # Eliminar eixos i graella
-        p.axis.visible = False
-        p.grid.visible = False
-        
-        # Crear sectors del diagrama circular
-        p.wedge(
-            x=0, y=0, 
-            radius=1,
-            start_angle='angle_start', 
-            end_angle='angle_end',
-            color='color',
-            source=df,
-            line_color="white",
-            line_width=2
-        )
-        
-        # Afegir hover tool
-        hover = HoverTool(
-            tooltips=[
-                ("Categoria", "@categoria"),
-                ("Quantitat", "@quantitat{0.00}€"),
-                ("Percentatge", "@percentatge{0.00}%"),
-            ]
-        )
-        p.add_tools(hover)
-        show(p)
-    
-    def _generar_colors(self, num_colors):
-        """Genera una llista de colors per al diagrama"""
-        colors = [
-            '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
-            '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
-            '#c49c94', '#f7b6d3', '#c7c7c7', '#dbdb8d', '#9edae5'
-        ]
-        
-        # Si necessitem més colors, generar colors addicionals
-        while len(colors) < num_colors:
-            colors.extend(colors[:min(len(colors), num_colors - len(colors))])
-            
-        return colors[:num_colors]
+        from bokeh.layouts import column, row
+        from bokeh.models import Button, ColumnDataSource, CustomJS, HoverTool, TapTool
 
-# Exemple d'ús:
-# from bokeh.plotting import figure, show
+        desglossos = desglossos_categories(despeses_dict)
+        columnes = {node: columnes_pastis(valors) for node, valors in desglossos.items()}
 
-# ui = UIBokeh()
-# despeses = {
-#     'Alimentació': -500.50,
-#     'Transport': -200.25,
-#     'Habitatge': -800.00,
-#     'Entreteniment': -150.75
-# }
-# estalvi = 2000.0
+        def pastis(titol_pastis, dades):
+            font = ColumnDataSource(data=dades)
+            p = figure(height=height, width=width, title=titol_pastis, toolbar_location=None, tools="",
+                       x_range=(-1.1, 1.1), y_range=(-1.1, 1.1))
+            p.axis.visible = False
+            p.grid.visible = False
+            p.wedge(x=0, y=0, radius=1, start_angle="angle_start", end_angle="angle_end", color="color",
+                    source=font, line_color="white", line_width=2)
+            p.add_tools(TapTool(), HoverTool(tooltips=[("Categoria", "@categoria"),
+                                                       ("Quantitat", "@quantitat{0.00}€"),
+                                                       ("Percentatge", "@percentatge{0.00}%")]))
+            return p, font
 
-# ui.mostrar_grafica_categories(despeses, ingressos)
-# Per mostrar: show(grafica) o curdoc().add_root(grafica)
+        principal, font_principal = pastis(f"{titol} (clica una porció per desglossar-la)", columnes[""])
+        desglos, font_desglos = pastis("Desglòs", columnes_pastis({}))
 
+        mostrar = """
+            function mostrar(categoria) {
+                if (dades[categoria]) {
+                    desglos.data = dades[categoria];
+                    titol.text = "Desglòs de " + categoria;
+                } else {
+                    desglos.data = buit;
+                    titol.text = categoria + " no té subcategories";
+                }
+                desglos.selected.indices = [];
+            }
+        """
+        args = dict(dades=columnes, buit=columnes_pastis({}), desglos=font_desglos, titol=desglos.title)
+        font_principal.selected.js_on_change("indices", CustomJS(args=dict(args, font=font_principal), code=mostrar + """
+            const i = cb_obj.indices;
+            if (i.length) mostrar(font.data.categoria[i[0]]);
+        """))
+        font_desglos.selected.js_on_change("indices", CustomJS(args=args, code=mostrar + """
+            const i = cb_obj.indices;
+            if (!i.length) return;
+            const categoria = desglos.data.categoria[i[0]];
+            // La part del node mateix (sense subcategoria) té el seu nom: no es pot desglossar més
+            if (dades[categoria] && "Desglòs de " + categoria != titol.text) mostrar(categoria);
+        """))
+        # Treu les seleccions (les porcions no seleccionades queden esvaïdes) i amaga el desglòs
+        inici = Button(label="Tornar a l'inici", width=150)
+        inici.js_on_click(CustomJS(args=dict(args, font=font_principal), code="""
+            font.selected.indices = [];
+            desglos.data = buit;
+            desglos.selected.indices = [];
+            titol.text = "Desglòs";
+        """))
+        show(column(inici, row(principal, desglos)))

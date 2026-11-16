@@ -16,7 +16,9 @@ Abans, `python3 scripts/comprovar_dades.py` ha de dir OK.
 ## Gràfiques
 - [ ] Gràfiques › "Balanç" obre la gràfica amb una línia per banc i el Total.
 - [ ] Gràfiques › "Imports" obre la gràfica d'imports acumulats.
-- [ ] Gràfiques › "Categories" obre la gràfica de despeses per categoria.
+- [ ] Gràfiques › "Categories" obre la gràfica de despeses per categoria, al primer nivell (casa, menjar...).
+- [ ] Clicar una porció amb subcategories (p. ex. casa) mostra al costat el seu desglòs; clicar-hi una porció amb subcategories baixa un nivell més; clicar-ne una sense subcategories al principal diu que no en té.
+- [ ] "Tornar a l'inici" treu les seleccions i buida el desglòs.
 - [ ] Amb un filtre actiu, les gràfiques només mostren els moviments filtrats.
 - [ ] Les gràfiques de balanç, d'imports i de previsió tenen una línia vertical el dia 1 de cada mes.
 

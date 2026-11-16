@@ -110,3 +110,28 @@ def test_profunditat_maxima():
     from domain import profunditat_maxima
     assert profunditat_maxima(["oci", "casa/subministraments/llum", "casa/habitatge"]) == 3
     assert profunditat_maxima([]) == 0
+
+
+# --- Desglòs per nodes (gràfica de categories) --------------------------------
+
+IMPORTS = {"casa/subministraments/llum": -50.0, "oci": -10.0, "casa/habitatge": -700.0,
+           "casa/subministraments/gas": -30.0, "casa": -5.0}
+
+
+def test_sumar_per_node_a_l_arrel_agrupa_al_primer_nivell_en_ordre_d_aparicio():
+    from domain import sumar_per_node
+    assert sumar_per_node(IMPORTS) == {"casa": -785.0, "oci": -10.0}
+
+
+def test_sumar_per_node_dona_els_fills_d_un_node_i_el_que_es_del_node_mateix():
+    from domain import sumar_per_node
+    assert sumar_per_node(IMPORTS, "casa") == {"casa/subministraments": -80.0, "casa/habitatge": -700.0,
+                                               "casa": -5.0}
+    assert sumar_per_node(IMPORTS, "casa/subministraments") == {"casa/subministraments/llum": -50.0,
+                                                                "casa/subministraments/gas": -30.0}
+
+
+def test_sumar_per_node_d_una_fulla_no_dona_res():
+    from domain import sumar_per_node
+    assert sumar_per_node(IMPORTS, "oci") == {"oci": -10.0}
+    assert sumar_per_node(IMPORTS, "casa/habitatge") == {"casa/habitatge": -700.0}

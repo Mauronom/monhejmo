@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+import pytest
 from domain import Moviment, calcular_punts
 from infra.ui_bokeh import hores_dels_punts
 
@@ -48,3 +49,33 @@ def test_inicis_de_mes_entre_dues_dates():
     assert inicis_de_mes_entre(date(2025, 11, 20), date(2026, 2, 1)) == [
         date(2025, 11, 1), date(2025, 12, 1), date(2026, 1, 1), date(2026, 2, 1)]
     assert inicis_de_mes_entre(date(2026, 3, 1), date(2026, 3, 31)) == [date(2026, 3, 1)]
+
+
+def test_desglossos_de_categories_per_a_cada_node_amb_subcategories():
+    from infra.ui_bokeh import desglossos_categories
+    imports = {"casa/llum": -50.0, "oci": -10.0, "casa/aigua": -30.0, "menjar/super/carn": -20.0}
+
+    assert desglossos_categories(imports) == {
+        "": {"casa": -80.0, "oci": -10.0, "menjar": -20.0},
+        "casa": {"casa/llum": -50.0, "casa/aigua": -30.0},
+        "menjar": {"menjar/super": -20.0},
+        "menjar/super": {"menjar/super/carn": -20.0},
+    }
+
+
+def test_columnes_pastis():
+    from infra.ui_bokeh import columnes_pastis
+    import math
+    columnes = columnes_pastis({"casa": -75.0, "oci": -25.0})
+
+    assert columnes["categoria"] == ["casa", "oci"]
+    assert columnes["quantitat"] == [75.0, 25.0]
+    assert columnes["percentatge"] == [75.0, 25.0]
+    assert columnes["angle_start"] == pytest.approx([0, 1.5 * math.pi])
+    assert columnes["angle_end"] == pytest.approx([1.5 * math.pi, 2 * math.pi])
+    assert len(columnes["color"]) == 2
+
+
+def test_columnes_pastis_buit():
+    from infra.ui_bokeh import columnes_pastis
+    assert columnes_pastis({})["categoria"] == []

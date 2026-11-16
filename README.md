@@ -112,7 +112,8 @@ moviments de les seves subcategories, i excloure una categoria (a `previsio` o a
 `despeses_variables`) n'exclou també les subcategories. Els nivells intermedis (`casa`,
 `casa/subministraments`) surten al desplegable encara que no tinguin paraules pròpies.
 A la pantalla de despeses variables, "Agrupar per" suma les despeses a un nivell de l'arbre
-(per exemple, "Nivell 1" ho ajunta tot a `casa`).
+(per exemple, "Nivell 1" ho ajunta tot a `casa`). La gràfica de categories mostra el primer nivell; en clicar una
+porció, al costat en surt el desglòs.
 
 ### Configuració (`config.json`)
 

@@ -28,6 +28,21 @@ def categoria_a_nivell(categoria, nivell):
     return SEPARADOR.join(categoria.split(SEPARADOR)[:nivell])
 
 
+def sumar_per_node(imports, node=None):
+    """
+    Suma els imports {categoria: import} als fills de `node` (a l'arrel si és None), en l'ordre en
+    què apareixen. El que és del node mateix (no de cap subcategoria) surt amb el nom del node.
+    """
+    nivell = len(node.split(SEPARADOR)) + 1 if node else 1
+    resultat = {}
+    for categoria, import_ in imports.items():
+        if node and not es_dins(categoria, node):
+            continue
+        clau = categoria_a_nivell(categoria, nivell)
+        resultat[clau] = resultat.get(clau, 0) + import_
+    return resultat
+
+
 def profunditat_maxima(noms):
     """Quants nivells té la categoria més profunda (0 si no n'hi ha cap)."""
     return max((len(nom.split(SEPARADOR)) for nom in noms), default=0)
